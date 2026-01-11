@@ -5,6 +5,7 @@ from typing import Dict
 import os
 from google import genai
 from fast_langdetect import detect
+from app.auth import LoginRequest, Token, authenticate_user, User
 
 app = FastAPI()
 
@@ -39,6 +40,39 @@ TEMPLATES: Dict[str, dict] = {
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
 client = genai.Client()
+
+# Authentication endpoint
+@app.post("/login")
+async def login(request: LoginRequest):
+    """Login endpoint for field office users"""
+    user = authenticate_user(request.email, request.password)
+    if not user:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid email or password"
+        )
+    
+    # Generate a simple token (in production, use JWT)
+    token = f"{user.email}_{user.field_office.value}"
+    
+    return Token(
+        access_token=token,
+        user=user
+    )
+
+@app.get("/users/me")
+async def get_current_user(token: str):
+    """Get current user by token"""
+    # Simple token parsing (in production, use JWT)
+    try:
+        email = token.split("_")[0]
+        from app.auth import get_user_by_email
+        user = get_user_by_email(email)
+        if not user:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        return user
+    except:
+        raise HTTPException(status_code=401, detail="Invalid token")
 
 def detect_lang(text: str) -> str:
     if not text.strip():
