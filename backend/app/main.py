@@ -35,6 +35,9 @@ TEMPLATES: Dict[str, dict] = {
     }
 }
 
+# Configure Gemini API
+genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+
 client = genai.Client()
 
 def detect_lang(text: str) -> str:
